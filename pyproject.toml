@@ -80,6 +80,7 @@ dependencies = [
     "uuid7==0.1.0",
     "xgboost==1.7.6",
     "html2text>=2025.4.15",
+    "playwright>=1.55.0",
 ]
 
 [build-system]

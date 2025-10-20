@@ -1,6 +1,7 @@
 """
 Script to fetch webpage content from URLs in the help desk CSV file.
 Adds a 'contents' column with the extracted text from each URL.
+Uses Playwright for JavaScript-rendered Notion pages.
 """
 
 import time
@@ -8,37 +9,41 @@ from pathlib import Path
 
 import html2text
 import pandas as pd
-import requests
-from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 from tqdm import tqdm
 
 from flex_ml.utils.path import PROCESSED_DATA_PATH, RAW_DATA_PATH
 
 
-def fetch_webpage_content(url: str, timeout: int = 10) -> str:
+def fetch_webpage_content(url: str, timeout: int = 30000) -> str:
     """
     Fetch and extract text content from a Notion webpage URL in markdown format.
+    Uses Playwright to handle JavaScript-rendered content.
 
     Args:
         url: The Notion URL to fetch content from
-        timeout: Request timeout in seconds
+        timeout: Page load timeout in milliseconds (default: 30000ms)
 
     Returns:
         Extracted markdown content or error message
     """
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
-        response = requests.get(url, headers=headers, timeout=timeout)
-        response.raise_for_status()
+        with sync_playwright() as p:
+            # Launch browser in headless mode
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
 
-        # Parse HTML content
-        soup = BeautifulSoup(response.content, "html.parser")
+            # Navigate to the URL and wait for content to load
+            page.goto(url, wait_until="networkidle", timeout=timeout)
 
-        # Remove script, style, and navigation elements
-        for script in soup(["script", "style", "nav", "footer", "header", "noscript"]):
-            script.decompose()
+            # Wait for Notion content to be rendered
+            # Notion uses div with class containing 'notion-page-content'
+            page.wait_for_selector("div.notion-page-content", timeout=10000)
+
+            # Get the rendered HTML
+            html_content = page.content()
+
+            browser.close()
 
         # Initialize html2text converter for markdown conversion
         h = html2text.HTML2Text()
@@ -50,7 +55,7 @@ def fetch_webpage_content(url: str, timeout: int = 10) -> str:
         h.ignore_tables = False  # Convert tables to markdown
 
         # Convert HTML to markdown
-        markdown_text = h.handle(str(soup))
+        markdown_text = h.handle(html_content)
 
         # Clean up extra whitespace while preserving markdown structure
         lines = markdown_text.split("\n")
@@ -75,12 +80,8 @@ def fetch_webpage_content(url: str, timeout: int = 10) -> str:
 
         return markdown_text
 
-    except requests.exceptions.Timeout:
-        return f"ERROR: Request timeout for {url}"
-    except requests.exceptions.RequestException as e:
-        return f"ERROR: Failed to fetch {url} - {str(e)}"
     except Exception as e:
-        return f"ERROR: Unexpected error for {url} - {str(e)}"
+        return f"ERROR: {type(e).__name__}: {str(e)} for {url}"
 
 
 def main():
