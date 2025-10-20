@@ -79,6 +79,7 @@ dependencies = [
     "tzlocal==5.3.1",
     "uuid7==0.1.0",
     "xgboost==1.7.6",
+    "html2text>=2025.4.15",
 ]
 
 [build-system]
