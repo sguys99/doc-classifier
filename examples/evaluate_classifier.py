@@ -4,8 +4,20 @@ Evaluate DocumentClassifier on the actual CSV data
 This script evaluates the classifier's performance by:
 1. Loading documents from the CSV file
 2. Classifying each document using the page_content
-3. Comparing predictions with actual categoryL1 labels
+3. Comparing predictions with actual category labels (L1 or L2)
 4. Computing accuracy metrics
+
+Supports both L1 (6 categories) and L2 (13 categories) classification.
+
+Usage:
+    # Evaluate L1 classification on all documents
+    python evaluate_classifier.py --level L1
+
+    # Evaluate L2 classification on 20 samples
+    python evaluate_classifier.py --level L2 --sample-size 20
+
+    # Evaluate without few-shot examples
+    python evaluate_classifier.py --level L1 --no-examples
 """
 
 from json import load
@@ -29,6 +41,7 @@ def evaluate_classifier(
     sample_size: int = None,
     use_examples: bool = True,
     random_seed: int = 42,
+    classification_level: str = "L1",
 ) -> Tuple[pd.DataFrame, Dict[str, float]]:
     """
     Evaluate the classifier on CSV data.
@@ -37,6 +50,7 @@ def evaluate_classifier(
         sample_size: Number of samples to evaluate. If None, use all data.
         use_examples: Whether to use few-shot examples in classification.
         random_seed: Random seed for sampling.
+        classification_level: "L1" for 6 categories or "L2" for 13 categories.
 
     Returns:
         Tuple of (results_df, metrics_dict)
@@ -46,6 +60,7 @@ def evaluate_classifier(
     df = pd.read_csv(data_path)
 
     print(f"Total documents in dataset: {len(df)}")
+    print(f"Classification level: {classification_level}")
 
     # Sample if requested
     if sample_size and sample_size < len(df):
@@ -56,16 +71,21 @@ def evaluate_classifier(
 
     # Initialize classifier
     print("\nInitializing classifier...")
-    classifier = DocumentClassifier(model="gpt-4o-mini")
+    classifier = DocumentClassifier(
+        model="gpt-4o-mini", classification_level=classification_level
+    )
 
     # Classify each document
     print("\nClassifying documents...")
     predictions = []
     actuals = []
 
+    # Use the correct category column based on classification level
+    category_column = "categoryL1" if classification_level == "L1" else "categoryL2"
+
     for idx, row in df.iterrows():
         page_content = row["page_content"]
-        actual_category = row["categoryL1"]
+        actual_category = row[category_column]
 
         try:
             predicted_category = classifier.classify(
@@ -187,6 +207,35 @@ def print_evaluation_report(results_df: pd.DataFrame, metrics: Dict):
 
 def main():
     """Run evaluation."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Evaluate Document Classifier")
+    parser.add_argument(
+        "--level",
+        type=str,
+        default="L1",
+        choices=["L1", "L2"],
+        help="Classification level: L1 (6 categories) or L2 (13 categories)",
+    )
+    parser.add_argument(
+        "--sample-size",
+        type=int,
+        default=None,
+        help="Number of samples to evaluate (default: all documents)",
+    )
+    parser.add_argument(
+        "--no-examples",
+        action="store_true",
+        help="Disable few-shot examples",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for sampling",
+    )
+
+    args = parser.parse_args()
 
     print("=" * 80)
     print("Document Classifier Evaluation")
@@ -200,21 +249,21 @@ def main():
         return
 
     # Run evaluation
-    # For testing, you can use sample_size to limit the number of documents
-    # Set sample_size=None to evaluate on all documents
     try:
         results_df, metrics = evaluate_classifier(
-            sample_size=100,  # Start with 10 samples for testing
-            use_examples=True,
-            random_seed=42,
+            sample_size=args.sample_size,
+            use_examples=not args.no_examples,
+            random_seed=args.seed,
+            classification_level=args.level,
         )
 
         # Print report
         print_evaluation_report(results_df, metrics)
 
         # Save results to CSV
+        filename = f"evaluation_results_{args.level.lower()}.csv"
         output_path = os.path.join(
-            os.path.dirname(__file__), "..", "data", "intermediate", "evaluation_results.csv"
+            os.path.dirname(__file__), "..", "data", "intermediate", filename
         )
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         results_df.to_csv(output_path, index=False)
