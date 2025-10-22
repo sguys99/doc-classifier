@@ -3,39 +3,44 @@ Document Classification Module using LLM Models
 
 This module provides functions to classify text documents into predefined categories
 using LLM models with few-shot prompting and Pydantic structured outputs.
+
+Supports both L1 (6 categories) and L2 (13 categories) classification.
 """
 
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 import pandas as pd
 import yaml
 from openai import OpenAI
 
-from flex_ml.models import CategoryL1, DocumentCategory
+from flex_ml.models import (
+    CategoryL1,
+    CategoryL2,
+    DocumentCategoryL1,
+    DocumentCategoryL2,
+)
 from flex_ml.utils.path import CONFIG_PATH, RAW_DATA_PATH
 
 
 class DocumentClassifier:
     """
-    Classifier for categorizing documents into categoryL1 using LLM.
+    Classifier for categorizing documents into categoryL1 or categoryL2 using LLM.
 
-    Categories:
-    - 지원 제도: Support systems and benefits
-    - 조직원칙 및 리더십: Organizational principles and leadership
-    - 근무환경 및 제도: Work environment and policies
-    - 구성원 여정: Member journey (recruitment, onboarding, etc.)
-    - 성장 및 발전: Growth and development
-    - 기타: Other documents that don't fit into above categories
+    Supports two classification levels:
+    - L1 (6 categories): 지원 제도, 조직원칙 및 리더십, 근무환경 및 제도, 구성원 여정, 성장 및 발전, 기타
+    - L2 (13 categories): 업무 지원, 생활 지원, 리더십, 문화/ 팀빌딩, etc.
     """
 
-    CATEGORIES = [category.value for category in CategoryL1]
+    CATEGORIES_L1 = [category.value for category in CategoryL1]
+    CATEGORIES_L2 = [category.value for category in CategoryL2]
 
     def __init__(
         self,
         api_key: Optional[str] = None,
         model: str = "gpt-4o-mini",
         data_path: Optional[str] = None,
+        classification_level: Literal["L1", "L2"] = "L1",
         prompt_config_path: Optional[str] = None,
     ):
         """
@@ -45,7 +50,8 @@ class DocumentClassifier:
             api_key: OpenAI API key. If None, reads from OPENAI_API_KEY env variable.
             model: OpenAI model to use. Default is "gpt-4o-mini".
             data_path: Path to CSV data file. If None, uses default from RAW_DATA_PATH.
-            prompt_config_path: Path to prompt config YAML file. If None, uses default.
+            classification_level: "L1" for 6 categories or "L2" for 13 categories. Default is "L1".
+            prompt_config_path: Path to prompt config YAML file. If None, uses default based on level.
         """
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
@@ -53,11 +59,30 @@ class DocumentClassifier:
 
         self.client = OpenAI(api_key=self.api_key)
         self.model = model
+        self.classification_level = classification_level
+
+        # Set category column name based on level
+        self.category_column = "categoryL1" if classification_level == "L1" else "categoryL2"
+
+        # Set CATEGORIES based on level
+        self.CATEGORIES = self.CATEGORIES_L1 if classification_level == "L1" else self.CATEGORIES_L2
+
+        # Set response format based on level
+        self.response_format = (
+            DocumentCategoryL1 if classification_level == "L1" else DocumentCategoryL2
+        )
 
         # Load prompt configuration
-        self.prompt_config_path = prompt_config_path or os.path.join(
-            CONFIG_PATH, "classifier_prompt.yaml"
-        )
+        if prompt_config_path is None:
+            prompt_filename = (
+                "classifier_prompt_l1.yaml"
+                if classification_level == "L1"
+                else "classifier_prompt_l2.yaml"
+            )
+            self.prompt_config_path = os.path.join(CONFIG_PATH, prompt_filename)
+        else:
+            self.prompt_config_path = prompt_config_path
+
         self.prompt_config = self._load_prompt_config()
 
         # Load training data for few-shot examples
@@ -91,7 +116,7 @@ class DocumentClassifier:
 
         for category in self.CATEGORIES:
             examples = (
-                self.df[self.df["categoryL1"] == category]
+                self.df[self.df[self.category_column] == category]
                 .head(examples_per_category)[["title", "page_content"]]
                 .to_dict("records")
             )
@@ -124,15 +149,25 @@ class DocumentClassifier:
                         prompt += f"예시 {i}:\n{content}...\n\n"
 
         # Add document to classify
+        num_categories = len(self.CATEGORIES)
+        if self.classification_level == "L1":
+            guidelines = f"""## 지침:
+  - 위 문서 내용의 주제와 맥락을 분석하여 가장 적합한 카테고리를 선택하세요.
+  - 반드시 위 {num_categories}가지 카테고리 중 하나만 정확히 응답하세요.
+  - 1-5번 카테고리에 명확히 속한다면 해당 카테고리를 선택하고, 어디에도 속하지 않는다면 6. 기타를 선택하세요.
+"""
+        else:  # L2
+            guidelines = f"""## 지침:
+  - 위 문서 내용의 주제와 맥락을 분석하여 가장 적합한 카테고리를 선택하세요.
+  - 반드시 위 {num_categories}가지 세부 카테고리 중 하나만 정확히 응답하세요.
+  - 문서의 구체적인 내용을 바탕으로 가장 관련성이 높은 카테고리를 선택하세요.
+"""
+
         prompt += f"""
 ## 분류할 문서 내용:
 {text}
 
-## 지침:
-  - 위 문서 내용의 주제와 맥락을 분석하여 가장 적합한 카테고리를 선택하세요.
-  - 반드시 위 6가지 카테고리 중 하나만 정확히 응답하세요.
-  - 1-5번 카테고리에 명확히 속한다면 해당 카테고리를 선택하고, 어디에도 속하지 않는다면 6. 기타를 선택하세요.
-"""
+{guidelines}"""
 
         return prompt
 
@@ -143,7 +178,10 @@ class DocumentClassifier:
         temperature: float = 0.0,
     ) -> str:
         """
-        Classify a text document into one of the categoryL1 categories using Pydantic structured output.
+        Classify a text document into one of the categories using Pydantic structured output.
+
+        The classification level (L1 or L2) is determined by the classification_level parameter
+        passed during initialization.
 
         Args:
             text: Input text to classify (page_content format).
@@ -162,7 +200,7 @@ class DocumentClassifier:
         completion = self.client.beta.chat.completions.parse(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
-            response_format=DocumentCategory,
+            response_format=self.response_format,
             temperature=temperature,
         )
 
@@ -192,6 +230,7 @@ def classify_document(
     api_key: Optional[str] = None,
     model: str = "gpt-4o-mini",
     use_examples: bool = True,
+    classification_level: Literal["L1", "L2"] = "L1",
 ) -> str:
     """
     Convenience function to classify a single document.
@@ -201,6 +240,7 @@ def classify_document(
         api_key: OpenAI API key. If None, reads from OPENAI_API_KEY env variable.
         model: OpenAI model to use. Default is "gpt-4o-mini".
         use_examples: Whether to use few-shot examples. Default is True.
+        classification_level: "L1" for 6 categories or "L2" for 13 categories. Default is "L1".
 
     Returns:
         Classified category name.
@@ -209,6 +249,10 @@ def classify_document(
         >>> category = classify_document("입사 지원서 제출 방법에 대한 안내")
         >>> print(category)
         구성원 여정
+
+        >>> category = classify_document("입사 지원서 제출 방법에 대한 안내", classification_level="L2")
+        >>> print(category)
+        채용
     """
-    classifier = DocumentClassifier(api_key=api_key, model=model)
+    classifier = DocumentClassifier(api_key=api_key, model=model, classification_level=classification_level)
     return classifier.classify(text, use_examples=use_examples)
