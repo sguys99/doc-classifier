@@ -10,10 +10,11 @@ from enum import Enum
 from typing import Dict, List, Optional
 
 import pandas as pd
+import yaml
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
-from flex_ml.utils.path import RAW_DATA_PATH
+from flex_ml.utils.path import CONFIG_PATH, RAW_DATA_PATH
 
 
 class CategoryL1(str, Enum):
@@ -24,6 +25,7 @@ class CategoryL1(str, Enum):
     WORK_ENVIRONMENT = "근무환경 및 제도"
     MEMBER_JOURNEY = "구성원 여정"
     GROWTH_DEVELOPMENT = "성장 및 발전"
+    OTHER = "기타"
 
 
 class DocumentCategory(BaseModel):
@@ -45,21 +47,17 @@ class DocumentClassifier:
     - 근무환경 및 제도: Work environment and policies
     - 구성원 여정: Member journey (recruitment, onboarding, etc.)
     - 성장 및 발전: Growth and development
+    - 기타: Other documents that don't fit into above categories
     """
 
-    CATEGORIES = [
-        "지원 제도",
-        "조직원칙 및 리더십",
-        "근무환경 및 제도",
-        "구성원 여정",
-        "성장 및 발전",
-    ]
+    CATEGORIES = [category.value for category in CategoryL1]
 
     def __init__(
         self,
         api_key: Optional[str] = None,
         model: str = "gpt-4o-mini",
         data_path: Optional[str] = None,
+        prompt_config_path: Optional[str] = None,
     ):
         """
         Initialize the DocumentClassifier.
@@ -68,6 +66,7 @@ class DocumentClassifier:
             api_key: OpenAI API key. If None, reads from OPENAI_API_KEY env variable.
             model: OpenAI model to use. Default is "gpt-4o-mini".
             data_path: Path to CSV data file. If None, uses default from RAW_DATA_PATH.
+            prompt_config_path: Path to prompt config YAML file. If None, uses default.
         """
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
@@ -76,12 +75,28 @@ class DocumentClassifier:
         self.client = OpenAI(api_key=self.api_key)
         self.model = model
 
+        # Load prompt configuration
+        self.prompt_config_path = prompt_config_path or os.path.join(
+            CONFIG_PATH, "classifier_prompt.yaml"
+        )
+        self.prompt_config = self._load_prompt_config()
+
         # Load training data for few-shot examples
         self.data_path = data_path or os.path.join(
             RAW_DATA_PATH, "people_intelligence_documents.csv"
         )
         self.df = pd.read_csv(self.data_path)
         self.category_examples = self._prepare_examples()
+
+    def _load_prompt_config(self) -> Dict:
+        """
+        Load prompt configuration from YAML file.
+
+        Returns:
+            Dictionary containing prompt configuration.
+        """
+        with open(self.prompt_config_path, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f)
 
     def _prepare_examples(self, examples_per_category: int = 3) -> Dict[str, List[Dict]]:
         """
@@ -107,7 +122,7 @@ class DocumentClassifier:
 
     def _build_prompt(self, text: str, use_examples: bool = True) -> str:
         """
-        Build the classification prompt for OpenAI API.
+        Build the classification prompt for OpenAI API using YAML configuration.
 
         Args:
             text: Input text to classify (page_content format).
@@ -116,36 +131,31 @@ class DocumentClassifier:
         Returns:
             Formatted prompt string.
         """
-        prompt = """당신은 회사 내부 문서를 분류하는 전문가입니다.
-        주어진 문서 내용(page_content)을 분석하여 다음 5가지 카테고리 중 하나로 분류해주세요:
-        
-        1. 지원 제도: 업무 지원, 생활 지원, 복지 혜택 등에 관한 내용
-        2. 조직원칙 및 리더십: 리더십, 원칙/철학, 문화/팀빌딩에 관한 내용
-        3. 근무환경 및 제도: 근무 제도, 오피스 환경, 근무 시간 등에 관한 내용
-        4. 구성원 여정: 채용, 온보딩, 퇴사 등 구성원 라이프사이클에 관한 내용
-        5. 성장 및 발전: 교육, 학습, 커리어 개발 등에 관한 내용
-        """
+        # Load base prompt from YAML
+        prompt = self.prompt_config["base_prompt"]
 
+        # Add few-shot examples from CSV
         if use_examples:
-            prompt += "\n## 각 카테고리별 예시 문서:\n\n"
+            prompt += "\n\n## 각 카테고리별 예시 문서:\n\n"
             for category, examples in self.category_examples.items():
-                prompt += f"### {category}\n"
-                for i, example in enumerate(examples[:2], 1):  # Use 2 examples per category
-                    content = example.get("page_content", "")[:500]  # Show more content
-                    prompt += f"예시 {i}:\n{content}...\n\n"
+                if examples:  # Only if examples exist
+                    prompt += f"### {category}\n"
+                    for i, example in enumerate(examples[:2], 1):  # Use 2 examples per category
+                        content = example.get("page_content", "")[:500]  # Show more content
+                        prompt += f"예시 {i}:\n{content}...\n\n"
 
+        # Add document to classify
         prompt += f"""
-        ## 분류할 문서 내용:
-        # {text}
-         
-         
-        ## 지침:
-          - 위 문서 내용의 주제와 맥락을 분석하여 가장 적합한 카테고리를 선택하세요.
-          - 반드시 위 5가지 카테고리 중 하나만 정확히 응답하세요.
-          """
+## 분류할 문서 내용:
+{text}
+
+## 지침:
+  - 위 문서 내용의 주제와 맥락을 분석하여 가장 적합한 카테고리를 선택하세요.
+  - 반드시 위 6가지 카테고리 중 하나만 정확히 응답하세요.
+  - 1-5번 카테고리에 명확히 속한다면 해당 카테고리를 선택하고, 어디에도 속하지 않는다면 6. 기타를 선택하세요.
+"""
 
         return prompt
-
 
     def classify(
         self,

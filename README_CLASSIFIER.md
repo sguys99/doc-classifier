@@ -89,12 +89,68 @@ classifier = DocumentClassifier(model="gpt-4o")
 
 ## 예제 실행
 
+### 기본 예제
+
 ```bash
 # 가상환경 활성화
 source .venv/bin/activate
 
-# 예제 스크립트 실행
+# 예제 스크립트 실행 (마크다운 형식의 샘플 문서 분류)
 python examples/classify_example.py
+```
+
+### CSV 데이터 평가
+
+실제 CSV 데이터의 page_content를 사용하여 분류하고 정답(categoryL1)과 비교:
+
+```bash
+# 단일 문서 테스트 (인터랙티브)
+python examples/test_single_document.py
+
+# 전체 데이터셋 평가 (10개 샘플)
+python examples/evaluate_classifier.py
+```
+
+**test_single_document.py 사용 예시:**
+
+```python
+# CSV에서 특정 문서를 불러와 분류하고 정답과 비교
+import pandas as pd
+from flex_ml.document_classifier import DocumentClassifier
+from flex_ml.utils.path import RAW_DATA_PATH
+
+# 데이터 로드
+df = pd.read_csv(f"{RAW_DATA_PATH}/people_intelligence_documents.csv")
+
+# 분류기 초기화
+classifier = DocumentClassifier()
+
+# 첫 번째 문서 테스트
+row = df.iloc[0]
+predicted = classifier.classify(row['page_content'])
+
+print(f"실제 카테고리: {row['categoryL1']}")
+print(f"예측 카테고리: {predicted}")
+print(f"결과: {'✓ 정답' if predicted == row['categoryL1'] else '✗ 오답'}")
+```
+
+**evaluate_classifier.py 결과 예시:**
+
+```
+EVALUATION RESULTS
+================================================================================
+
+Overall Accuracy: 92.00%
+Correct: 46/50
+
+--------------------------------------------------------------------------------
+Per-Category Performance:
+--------------------------------------------------------------------------------
+지원 제도                      | Accuracy: 95.00% (19/20)
+조직원칙 및 리더십              | Accuracy: 90.91% (10/11)
+근무환경 및 제도                | Accuracy: 83.33% (5/6)
+구성원 여정                    | Accuracy: 100.00% (8/8)
+성장 및 발전                   | Accuracy: 80.00% (4/5)
 ```
 
 ## API 레퍼런스
