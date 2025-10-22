@@ -11,7 +11,7 @@ import sys
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from flex_ml.document_classifier import DocumentClassifier, classify_document
+from flex_ml.models import DocumentClassifier, classify_document
 
 
 def main():

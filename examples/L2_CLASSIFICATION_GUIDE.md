@@ -14,7 +14,7 @@ DocumentClassifier는 이제 두 가지 분류 수준을 지원합니다:
 ### 방법 1: DocumentClassifier 클래스 사용
 
 ```python
-from flex_ml.document_classifier import DocumentClassifier
+from flex_ml.models import DocumentClassifier
 
 # L1 분류 (6개 카테고리)
 classifier_l1 = DocumentClassifier(classification_level="L1")
@@ -30,7 +30,7 @@ print(f"L2 분류: {category_l2}")  # Output: 근무 제도
 ### 방법 2: classify_document 편의 함수 사용
 
 ```python
-from flex_ml.document_classifier import classify_document
+from flex_ml.models import classify_document
 
 text = "입사 지원서 제출 방법 및 면접 일정 안내"
 

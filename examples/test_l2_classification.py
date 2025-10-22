@@ -12,7 +12,7 @@ import pandas as pd
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from flex_ml.document_classifier import DocumentClassifier
+from flex_ml.models import DocumentClassifier
 from flex_ml.utils.path import RAW_DATA_PATH
 
 
@@ -65,7 +65,7 @@ def test_classification_levels():
 
 def test_convenience_function():
     """Test the convenience function with both levels."""
-    from flex_ml.document_classifier import classify_document
+    from flex_ml.models import classify_document
 
     test_text = "입사 지원서 제출 방법 및 면접 일정 안내"
 

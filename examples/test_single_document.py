@@ -15,7 +15,7 @@ import pandas as pd
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from flex_ml.document_classifier import DocumentClassifier
+from flex_ml.models import DocumentClassifier
 from flex_ml.utils.path import RAW_DATA_PATH
 
 

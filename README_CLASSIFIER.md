@@ -39,7 +39,7 @@ export OPENAI_API_KEY="your-api-key-here"
 ### 방법 1: 간편한 함수 호출
 
 ```python
-from flex_ml.document_classifier import classify_document
+from flex_ml.models import classify_document
 
 # 단일 문서 분류
 text = "입사 지원서 제출 방법 및 면접 일정 안내"
@@ -50,7 +50,7 @@ print(category)  # Output: 구성원 여정
 ### 방법 2: 클래스 인스턴스 활용
 
 ```python
-from flex_ml.document_classifier import DocumentClassifier
+from flex_ml.models import DocumentClassifier
 
 # 분류기 초기화
 classifier = DocumentClassifier(

@@ -14,7 +14,7 @@ import pandas as pd
 import yaml
 from openai import OpenAI
 
-from flex_ml.models import (
+from flex_ml.models.schemas import (
     CategoryL1,
     CategoryL2,
     DocumentCategoryL1,
