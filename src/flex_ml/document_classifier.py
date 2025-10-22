@@ -6,35 +6,14 @@ using LLM models with few-shot prompting and Pydantic structured outputs.
 """
 
 import os
-from enum import Enum
 from typing import Dict, List, Optional
 
 import pandas as pd
 import yaml
 from openai import OpenAI
-from pydantic import BaseModel, Field
 
+from flex_ml.models import CategoryL1, DocumentCategory
 from flex_ml.utils.path import CONFIG_PATH, RAW_DATA_PATH
-
-
-class CategoryL1(str, Enum):
-    """Valid categoryL1 values."""
-
-    SUPPORT_SYSTEM = "지원 제도"
-    ORGANIZATION_LEADERSHIP = "조직원칙 및 리더십"
-    WORK_ENVIRONMENT = "근무환경 및 제도"
-    MEMBER_JOURNEY = "구성원 여정"
-    GROWTH_DEVELOPMENT = "성장 및 발전"
-    OTHER = "기타"
-
-
-class DocumentCategory(BaseModel):
-    """Structured output for document classification."""
-
-    category: CategoryL1 = Field(
-        ...,
-        description="The classified category for the document. Must be one of the predefined categories.",
-    )
 
 
 class DocumentClassifier:
