@@ -23,7 +23,7 @@ def load_config(path: str) -> Dict[str, Any]:
     return config
 
 
-def load_all_configs(data_type="HPMC"):
+def load_all_configs():
     """
     Load various configuration files required for data processing and model training.
     Depending on the data_type, different training configuration paths are used.
