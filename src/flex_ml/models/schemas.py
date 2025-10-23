@@ -52,7 +52,10 @@ class DocumentCategoryL1(BaseModel):
 
     category: CategoryL1 = Field(
         ...,
-        description="The classified L1 category for the document. Must be one of the predefined categories.",
+        description=(
+            "The classified L1 category for the document. "
+            "Must be one of the predefined categories."
+        ),
     )
 
 
@@ -61,5 +64,26 @@ class DocumentCategoryL2(BaseModel):
 
     category: CategoryL2 = Field(
         ...,
-        description="The classified L2 category for the document. Must be one of the predefined categories.",
+        description=(
+            "The classified L2 category for the document. "
+            "Must be one of the predefined categories."
+        ),
+    )
+
+
+class QueryCategoryL1(BaseModel):
+    """Structured output for L1 query classification (Intelligence Triage)."""
+
+    category: CategoryL1 = Field(
+        ...,
+        description="The classified L1 category for the query. Must be one of the predefined categories.",
+    )
+
+
+class QueryCategoryL2(BaseModel):
+    """Structured output for L2 query classification (Intelligence Triage)."""
+
+    category: CategoryL2 = Field(
+        ...,
+        description="The classified L2 category for the query. Must be one of the predefined categories.",
     )
