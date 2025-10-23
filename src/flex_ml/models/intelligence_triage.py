@@ -4,7 +4,7 @@ Intelligence Triage Module using LLM Models
 This module provides functions to classify user queries into predefined categories
 using LLM models with few-shot prompting and Pydantic structured outputs.
 
-Supports both L1 (6 categories) and L2 (13 categories) classification for queries.
+Supports both L1 (6 categories) and L2 (14 categories) classification for queries.
 """
 
 import os
@@ -32,7 +32,7 @@ class IntelligenceTriage:
 
     Supports two classification levels:
     - L1 (6 categories): 지원 제도, 조직원칙 및 리더십, 근무환경 및 제도, 구성원 여정, 성장 및 발전, 기타
-    - L2 (13 categories): 업무 지원, 생활 지원, 리더십, 문화/ 팀빌딩, etc.
+    - L2 (14 categories): 업무 지원, 생활 지원, 리더십, 문화/ 팀빌딩, etc.
     """
 
     CATEGORIES_L1 = [category.value for category in CategoryL1]

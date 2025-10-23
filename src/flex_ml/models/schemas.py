@@ -46,6 +46,9 @@ class CategoryL2(str, Enum):
     # 성장 및 발전
     PERFORMANCE_GROWTH = "성과/성장"
 
+    # 기타
+    OTHER = "기타"
+
 
 class DocumentCategoryL1(BaseModel):
     """Structured output for L1 document classification."""
@@ -53,8 +56,7 @@ class DocumentCategoryL1(BaseModel):
     category: CategoryL1 = Field(
         ...,
         description=(
-            "The classified L1 category for the document. "
-            "Must be one of the predefined categories."
+            "The classified L1 category for the document. " "Must be one of the predefined categories."
         ),
     )
 
@@ -65,8 +67,7 @@ class DocumentCategoryL2(BaseModel):
     category: CategoryL2 = Field(
         ...,
         description=(
-            "The classified L2 category for the document. "
-            "Must be one of the predefined categories."
+            "The classified L2 category for the document. " "Must be one of the predefined categories."
         ),
     )
 

@@ -4,7 +4,7 @@ Document Classification Module using LLM Models
 This module provides functions to classify text documents into predefined categories
 using LLM models with few-shot prompting and Pydantic structured outputs.
 
-Supports both L1 (6 categories) and L2 (13 categories) classification.
+Supports both L1 (6 categories) and L2 (14 categories) classification.
 """
 
 import os
@@ -29,7 +29,7 @@ class DocumentClassifier:
 
     Supports two classification levels:
     - L1 (6 categories): 지원 제도, 조직원칙 및 리더십, 근무환경 및 제도, 구성원 여정, 성장 및 발전, 기타
-    - L2 (13 categories): 업무 지원, 생활 지원, 리더십, 문화/ 팀빌딩, etc.
+    - L2 (14 categories): 업무 지원, 생활 지원, 리더십, 문화/ 팀빌딩, etc.
     """
 
     CATEGORIES_L1 = [category.value for category in CategoryL1]
@@ -50,7 +50,7 @@ class DocumentClassifier:
             api_key: OpenAI API key. If None, reads from OPENAI_API_KEY env variable.
             model: OpenAI model to use. Default is "gpt-4o-mini".
             data_path: Path to CSV data file. If None, uses default from RAW_DATA_PATH.
-            classification_level: "L1" for 6 categories or "L2" for 13 categories. Default is "L1".
+            classification_level: "L1" for 6 categories or "L2" for 14 categories. Default is "L1".
             prompt_config_path: Path to prompt config YAML file. If None, uses default based on level.
         """
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
@@ -68,9 +68,7 @@ class DocumentClassifier:
         self.CATEGORIES = self.CATEGORIES_L1 if classification_level == "L1" else self.CATEGORIES_L2
 
         # Set response format based on level
-        self.response_format = (
-            DocumentCategoryL1 if classification_level == "L1" else DocumentCategoryL2
-        )
+        self.response_format = DocumentCategoryL1 if classification_level == "L1" else DocumentCategoryL2
 
         # Load prompt configuration
         if prompt_config_path is None:
@@ -86,9 +84,7 @@ class DocumentClassifier:
         self.prompt_config = self._load_prompt_config()
 
         # Load training data for few-shot examples
-        self.data_path = data_path or os.path.join(
-            RAW_DATA_PATH, "people_intelligence_documents.csv"
-        )
+        self.data_path = data_path or os.path.join(RAW_DATA_PATH, "people_intelligence_documents.csv")
         self.df = pd.read_csv(self.data_path)
         self.category_examples = self._prepare_examples()
 
@@ -208,9 +204,7 @@ class DocumentClassifier:
         result = completion.choices[0].message.parsed
         return result.category.value
 
-    def classify_batch(
-        self, texts: List[str], use_examples: bool = True, **kwargs
-    ) -> List[str]:
+    def classify_batch(self, texts: List[str], use_examples: bool = True, **kwargs) -> List[str]:
         """
         Classify multiple text documents.
 
@@ -240,7 +234,7 @@ def classify_document(
         api_key: OpenAI API key. If None, reads from OPENAI_API_KEY env variable.
         model: OpenAI model to use. Default is "gpt-4o-mini".
         use_examples: Whether to use few-shot examples. Default is True.
-        classification_level: "L1" for 6 categories or "L2" for 13 categories. Default is "L1".
+        classification_level: "L1" for 6 categories or "L2" for 14 categories. Default is "L1".
 
     Returns:
         Classified category name.
@@ -254,5 +248,7 @@ def classify_document(
         >>> print(category)
         채용
     """
-    classifier = DocumentClassifier(api_key=api_key, model=model, classification_level=classification_level)
+    classifier = DocumentClassifier(
+        api_key=api_key, model=model, classification_level=classification_level
+    )
     return classifier.classify(text, use_examples=use_examples)

@@ -19,7 +19,12 @@ def test_import():
     print("Testing imports...")
     try:
         from flex_ml.models import IntelligenceTriage, triage_query
-        from flex_ml.models.schemas import CategoryL1, CategoryL2, QueryCategoryL1, QueryCategoryL2
+        from flex_ml.models.schemas import (
+            CategoryL1,
+            CategoryL2,
+            QueryCategoryL1,
+            QueryCategoryL2,
+        )
 
         print("✓ All imports successful")
         return True
@@ -84,6 +89,7 @@ def test_l2_classification():
             "오프보딩",
             "구성원을 위한 개인정보 처리방침",
             "성과/성장",
+            "기타",
         ], f"Invalid L2 category: {category}"
 
         print(f"✓ L2 classification successful: {query} -> {category}")

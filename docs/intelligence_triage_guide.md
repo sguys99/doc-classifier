@@ -8,7 +8,7 @@ Intelligence Triage is a feature that classifies user queries into predefined ca
 
 - **Two-Level Classification**:
   - **L1**: 6 broad categories (지원 제도, 조직원칙 및 리더십, 근무환경 및 제도, 구성원 여정, 성장 및 발전, 기타)
-  - **L2**: 13 detailed categories (업무 지원, 생활 지원, 리더십, 문화/ 팀빌딩, etc.)
+  - **L2**: 14 detailed categories (업무 지원, 생활 지원, 리더십, 문화/ 팀빌딩, etc.)
 
 - **Few-Shot Prompting**: Uses examples from the training data to improve classification accuracy
 
@@ -88,7 +88,7 @@ category = triage.classify(query, use_examples=False)
 5. **성장 및 발전** - Growth and development
 6. **기타** - Other
 
-### L2 Categories (13 categories)
+### L2 Categories (14 categories)
 
 1. **업무 지원** - Work support (IT, devices, etc.)
 2. **생활 지원** - Life support (fitness, health, etc.)
@@ -103,6 +103,7 @@ category = triage.classify(query, use_examples=False)
 11. **오프보딩** - Offboarding
 12. **구성원을 위한 개인정보 처리방침** - Privacy policy for members
 13. **성과/성장** - Performance and growth
+14. **기타** - Other
 
 ## Configuration
 
