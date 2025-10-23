@@ -1,8 +1,7 @@
 """
-Query Generation Module for HR Q&A Chatbot
+Query Generation Module for HR Helpdesk service
 
-This module provides functions to generate expected questions from HR document content
-using LLM models for creating training data for Q&A chatbots.
+This module provides functions to generate expected questions from HR document content for evaluation.
 """
 
 import os

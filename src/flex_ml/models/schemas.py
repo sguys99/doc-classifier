@@ -1,7 +1,7 @@
 """
-Data models for document classification.
+Data models for classification.
 
-This module defines the Pydantic models and Enums used for document classification.
+This module defines the Pydantic models and Enums used for document or query classification.
 """
 
 from enum import Enum
